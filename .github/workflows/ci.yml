@@ -25,12 +25,34 @@ jobs:
           sh -n install.sh
           sh -n menu.sh
       - name: Build helper and download verified official test binaries
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p "$RUNNER_TEMP/dae-tests"
           go build -o "$RUNNER_TEMP/dae-tests/dae-manager" .
           (cd helper && go build -o "$RUNNER_TEMP/dae-tests/dae-helper" .)
-          "$RUNNER_TEMP/dae-tests/dae-manager" --state "$RUNNER_TEMP/dae-state" core --version v2.1.1 --arch amd64 --output "$RUNNER_TEMP/dae-tests/dae"
-          "$RUNNER_TEMP/dae-tests/dae-manager" --state "$RUNNER_TEMP/dae-state" helper --version v1.19.33 --arch amd64 --output "$RUNNER_TEMP/dae-tests/mihomo"
+          python3 - <<'PY'
+          import gzip, hashlib, json, os, pathlib, subprocess, zipfile
+          folder = pathlib.Path(os.environ['RUNNER_TEMP']) / 'dae-tests'
+          specs = [
+              ('daeuniverse/dae', 'v2.1.1', 'dae-linux-x86_64.zip', 'dae'),
+              ('MetaCubeX/mihomo', 'v1.19.33', 'mihomo-linux-amd64-compatible-v1.19.33.gz', 'mihomo'),
+          ]
+          for repo, tag, name, binary in specs:
+              release = json.loads(subprocess.check_output(['gh', 'api', f'repos/{repo}/releases/tags/{tag}']))
+              asset = next(a for a in release['assets'] if a['name'] == name)
+              subprocess.run(['gh', 'release', 'download', tag, '--repo', repo, '--pattern', name, '--dir', str(folder)], check=True)
+              path = folder / name
+              assert asset.get('digest') == 'sha256:' + hashlib.sha256(path.read_bytes()).hexdigest(), 'Official asset checksum mismatch'
+              if name.endswith('.zip'):
+                  with zipfile.ZipFile(path) as archive:
+                      member = next(n for n in archive.namelist() if pathlib.PurePosixPath(n).name == 'dae-linux-x86_64')
+                      data = archive.read(member)
+              else:
+                  data = gzip.decompress(path.read_bytes())
+              (folder / binary).write_bytes(data)
+              (folder / binary).chmod(0o755)
+          PY
       - name: Test and vet both modules
         run: |
           export DAE_TEST_BINARY="$RUNNER_TEMP/dae-tests/dae"
