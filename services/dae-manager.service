@@ -1,0 +1,20 @@
+[Unit]
+Description=DAE Manager - local control panel and DNS frontend
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStartPre=/usr/bin/mkdir -p /tmp/dae-manager
+ExecStart=/usr/local/bin/dae-manager --state /etc/dae-manager serve
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+ProtectHome=true
+ProtectSystem=full
+ReadWritePaths=/etc/dae-manager
+LimitNOFILE=4096
+
+[Install]
+WantedBy=multi-user.target

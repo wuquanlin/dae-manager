@@ -1,0 +1,19 @@
+[Unit]
+Description=DAE transparent proxy managed by DAE Manager
+After=network-online.target dae-manager.service
+Wants=network-online.target dae-manager.service
+ConditionPathExists=/etc/dae-manager/current/config.dae
+
+[Service]
+Type=simple
+ExecStartPre=/usr/bin/mkdir -p /tmp/dae-manager
+ExecStartPre=/usr/local/bin/dae validate -c /etc/dae-manager/current/config.dae
+ExecStart=/usr/local/bin/dae run --disable-sudo --disable-pidfile -c /etc/dae-manager/current/config.dae --logfile /tmp/dae-manager/dae.log --logfile-maxsize 5 --logfile-maxbackups 2
+Restart=on-failure
+RestartSec=5
+UMask=0077
+LimitNOFILE=65535
+LimitMEMLOCK=infinity
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,26 @@
+name: Build release
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: '1.27.3'
+          cache-dependency-path: |
+            go.sum
+            helper/go.sum
+      - run: python3 scripts/build.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: public-linux-releases
+          path: |
+            dist/public/*.tar.gz
+            dist/public/SHA256SUMS
+          if-no-files-found: error

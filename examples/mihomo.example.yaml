@@ -1,0 +1,27 @@
+# 示例用于学习迁移结构。以下节点无效，请换成自己的合法配置。
+mode: rule
+ipv6: false
+proxies:
+  - name: 示例节点-请替换
+    type: vless
+    server: proxy.example.com
+    port: 443
+    uuid: 00000000-0000-0000-0000-000000000000
+    tls: true
+    servername: proxy.example.com
+    network: tcp
+proxy-groups:
+  - name: 手动选择
+    type: select
+    proxies: [自动选择, 示例节点-请替换, DIRECT]
+  - name: 自动选择
+    type: url-test
+    proxies: [示例节点-请替换]
+    url: https://www.gstatic.com/generate_204
+    interval: 300
+rules:
+  - DOMAIN-SUFFIX,example.org,DIRECT
+  - MATCH,手动选择
+dns:
+  enable: true
+  nameserver: [https://223.5.5.5/dns-query]

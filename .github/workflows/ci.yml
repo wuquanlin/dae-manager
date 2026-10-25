@@ -1,0 +1,41 @@
+name: CI
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: '1.27.3'
+          cache-dependency-path: |
+            go.sum
+            helper/go.sum
+      - name: Check public source and scripts
+        run: |
+          python3 scripts/check_public.py
+          python3 -m py_compile scripts/build.py scripts/check_public.py
+          node --check web/app.js
+          sh -n install.sh
+          sh -n menu.sh
+      - name: Build helper and download verified official test binaries
+        run: |
+          mkdir -p "$RUNNER_TEMP/dae-tests"
+          go build -o "$RUNNER_TEMP/dae-tests/dae-manager" .
+          (cd helper && go build -o "$RUNNER_TEMP/dae-tests/dae-helper" .)
+          "$RUNNER_TEMP/dae-tests/dae-manager" --state "$RUNNER_TEMP/dae-state" core --version v2.1.1 --arch amd64 --output "$RUNNER_TEMP/dae-tests/dae"
+          "$RUNNER_TEMP/dae-tests/dae-manager" --state "$RUNNER_TEMP/dae-state" helper --version v1.19.33 --arch amd64 --output "$RUNNER_TEMP/dae-tests/mihomo"
+      - name: Test and vet both modules
+        run: |
+          export DAE_TEST_BINARY="$RUNNER_TEMP/dae-tests/dae"
+          export MRS_TEST_BINARY="$RUNNER_TEMP/dae-tests/mihomo"
+          export DAE_MANAGER_HELPER="$RUNNER_TEMP/dae-tests/dae-helper"
+          go test -race -count=1 ./...
+          go vet ./...
+          (cd helper && go test -race -count=1 ./... && go vet ./...)
