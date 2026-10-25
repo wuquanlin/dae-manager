@@ -84,7 +84,7 @@ def main():
     check(files)
     DIST.mkdir(parents=True, exist_ok=True)
     artifacts = []
-    with tempfile.TemporaryDirectory(prefix='build-', dir=DIST) as temp:
+    with tempfile.TemporaryDirectory(prefix='dae-build-') as temp:
         package = Path(temp) / NAME
         copy_sources(package, files)
         (package / 'bin').mkdir()
@@ -108,7 +108,7 @@ def main():
         archive(package, full)
         artifacts.append(full)
         for name in selected:
-            with tempfile.TemporaryDirectory(prefix='arch-', dir=DIST) as arch_temp:
+            with tempfile.TemporaryDirectory(prefix='dae-arch-') as arch_temp:
                 single = Path(arch_temp) / NAME
                 copy_sources(single, files)
                 shutil.copytree(package / 'licenses', single / 'licenses')
@@ -121,7 +121,7 @@ def main():
                 archive(single, output)
                 artifacts.append(output)
         # Publish complete corresponding source, including exact vendored dependencies.
-        with tempfile.TemporaryDirectory(prefix='source-', dir=DIST) as source_temp:
+        with tempfile.TemporaryDirectory(prefix='dae-source-') as source_temp:
             source = Path(source_temp) / (NAME + '-source')
             copy_sources(source, files)
             env = dict(os.environ, GOOS='linux', GOARCH='amd64', CGO_ENABLED='0')
